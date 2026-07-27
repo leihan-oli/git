@@ -1,0 +1,158 @@
+%YAML 1.2
+---
+
+# ============================================================
+# 本文件由 run_calibration.py 自动生成，可直接用于 RT-Stitching
+# 相机数 = 3（顺序：left, middle, right），内参已缩放到 1280x720
+# R 为相机→世界(middle)：middle=I, left=R_LM, right=R_MR^T
+# 该 R 约定已通过几何验证；正常无需手动转置。若仍异常请优先检查双目外参 RMS
+# T 为各相机光心在 world 系的位置(米)，供 parallax_d0 视差补偿使用；d0<=0 时不参与计算
+# ============================================================
+stitching:
+  # --- 基础设置 ---
+  preview: false
+  try_cuda: false
+  log_level: 2
+  verbose_output: true
+  camera_count: 3
+  output_width: 3840
+  output_height: 720
+
+  # --- 图像分辨率缩放参数 ---
+  input_scale_megapix: -1.0
+  homo_est_scale_megapix: 0.6
+  exp_est_scale_megapix: 0.6
+  seam_finder_scale_megapix: 0.1
+  blender_scale_megapix: -1.0
+
+  # --- 特征提取与匹配 ---
+  features_type: "sift"
+  matcher_type: "homography"
+  match_conf: 0.3
+  max_features: 1000
+  matching_thresh: 1.0
+  match_rw: -1
+
+  # --- 相机位姿估计与校正 ---
+  adjuster_type: "ray"
+  wave_correction: "horiz"
+  warper_type: "spherical"
+  estimator_type: "homography"
+
+  # --- 近景视差补偿（新增） ---
+  #   <=0 = 关闭（纯旋转，原行为）；>0 = 假设场景在半径 d0(米) 的球面上，
+  #   用下方 camera_params 里各相机的 T(光心) 补偿视差：d0 处物体严格对齐，
+  #   偏离 d0 的深度错位为 f*b*|1/d - 1/d0|。请设为实际主体工作距离。
+  #   仅 spherical warper 生效；需升级后的 RT-Stitching 才识别本字段。
+  parallax_d0: 0.0
+
+  # --- 曝光补偿 ---
+  exp_type: "gain_blocks"
+  exp_nr_feeds: 1
+  exp_nr_filtering: 2
+  exp_block_size: 32
+
+  # --- 接缝查找与融合 ---
+  seam_find_type: "gc_color"
+  crop: false
+  blender_type: "Blender::FEATHER"
+  blend_strength: 5
+
+  # --- 注视感知接缝避让 ---
+  gaze_sigma_ratio: 0.10
+  gaze_alpha: 8.0
+  gaze_data_path: "out/build/x64-Release/gaze_data.bin"
+  gaze_transport: "socket"
+  gaze_socket_port: 5599
+
+  # --- 显著性来源融合（眼动 + U2-Net）---
+  saliency:
+    use_gaze:     true
+    use_u2net:    true
+    fusion_mode:  "max"
+    gaze_weight:  0.7
+    u2net_weight: 0.3
+    u2net_dir:    "SaliencyDetector/saliency_out"
+    display_mode: "combined"
+
+  # --- 输出 ---
+  result_name: "result.jpg"
+
+
+# ============================================================
+# 相机信息（CameraInfo）
+# url 为采集时设备号；部署到板子上请改成左/中/右相机的实际设备号
+# ============================================================
+camera_info:
+  - video_index: 0
+    description: "left"
+    type: "camera"
+    url: "0"
+    width: 1280
+    height: 720
+    undistort: true
+    model: "pinhole"
+    fps: 30
+  - video_index: 1
+    description: "middle"
+    type: "camera"
+    url: "1"
+    width: 1280
+    height: 720
+    undistort: true
+    model: "pinhole"
+    fps: 30
+  - video_index: 2
+    description: "right"
+    type: "camera"
+    url: "2"
+    width: 1280
+    height: 720
+    undistort: true
+    model: "pinhole"
+    fps: 30
+
+
+# ============================================================
+# 相机内参 / 外参（缩放到 1280x720）
+# ============================================================
+camera_params:
+  # ---- left (pinhole, 标定 1280x720 → 1280x720) ----
+  - K: [481.162671, 0.000000, 627.329662,
+        0.000000, 480.580224, 350.210243,
+        0.000000, 0.000000, 1.000000]
+    R: [0.469593566, 0.039565276, -0.881995732,
+        0.002510982, 0.998931468, 0.046147775,
+        0.882879141, -0.023885374, 0.468992442]
+    T: [-0.050951, 0.001201, -0.029803]
+    D: [-0.018983, -0.026611, -0.001317, 0.004129, 0.007104]
+    ppx: 627.329662
+    ppy: 350.210243
+    focal: 480.871448
+    aspect: 1.0
+  # ---- middle (pinhole, 标定 1280x720 → 1280x720) ----
+  - K: [474.141471, 0.000000, 641.456032,
+        0.000000, 471.291605, 337.480734,
+        0.000000, 0.000000, 1.000000]
+    R: [1.000000000, 0.000000000, 0.000000000,
+        0.000000000, 1.000000000, 0.000000000,
+        0.000000000, 0.000000000, 1.000000000]
+    T: [0.000000, 0.000000, 0.000000]
+    D: [-0.020518, -0.021940, -0.001342, 0.000980, 0.005833]
+    ppx: 641.456032
+    ppy: 337.480734
+    focal: 472.716538
+    aspect: 1.0
+  # ---- right (pinhole, 标定 1280x720 → 1280x720) ----
+  - K: [486.292866, 0.000000, 612.388852,
+        0.000000, 485.734645, 358.840483,
+        0.000000, 0.000000, 1.000000]
+    R: [0.519843846, -0.037656216, 0.853430949,
+        -0.007583255, 0.998785207, 0.048688860,
+        -0.854227645, -0.031782389, 0.518926787]
+    T: [0.050675, 0.001867, -0.026109]
+    D: [-0.013560, -0.034703, -0.002946, -0.002513, 0.010398]
+    ppx: 612.388852
+    ppy: 358.840483
+    focal: 486.013755
+    aspect: 1.0
